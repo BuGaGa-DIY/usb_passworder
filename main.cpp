@@ -1,4 +1,4 @@
-
+#define DEBUG
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -6,13 +6,16 @@
 #include "bsp/board.h"
 #include "tusb.h"
 #include <ctype.h>
-#include "usb_descriptors.h"
 
-
-static char password[] = {4, 5, 6, 7, 8, 9, 10};
+#include "log.h"
+#define CDC_TUSK_INTERVAL 1000
+#define MAX_PASS_LEN 64
+static char password[MAX_PASS_LEN] = "My!paSs\0";
 static uint8_t current_pos = 0;
 static bool start_pass = false;
+
 void hid_task(void);
+static void cdc_task(void);
 
 uint8_t char_to_hid_keycode( char c, uint8_t* modifier )
 {
@@ -79,6 +82,7 @@ int main()
 	{
 		tud_task(); // tinyusb device task
 		hid_task();
+		cdc_task();
 	}
 
 	return 0;
@@ -91,13 +95,13 @@ int main()
 // Invoked when device is mounted
 void tud_mount_cb(void)
 {
-	
+	LOGS_INFO("Device is mounted\n\r");
 }
 
 // Invoked when device is unmounted
 void tud_umount_cb(void)
 {
-	
+	LOGS_INFO("Device is unmounted\n\r");
 }
 
 // Invoked when usb bus is suspended
@@ -106,20 +110,21 @@ void tud_umount_cb(void)
 void tud_suspend_cb(bool remote_wakeup_en)
 {
 	(void) remote_wakeup_en;
-	
+	LOGS_INFO("Device is suspended\n\r");
+
 }
 
 // Invoked when usb bus is resumed
 void tud_resume_cb(void)
 {
-	
+	LOGS_INFO("Device is resumed\n\r");
 }
 
 //--------------------------------------------------------------------+
 // USB HID
 //--------------------------------------------------------------------+
 
-static void send_password_key( char key )
+static void send_password()
 {
 	// skip if hid is not ready yet
 	if ( !tud_hid_ready() ) return;
@@ -127,10 +132,21 @@ static void send_password_key( char key )
 	static bool toggle = false;
 	uint8_t keycode[6] = { 0 };
 	uint8_t modifier = 0;
-	keycode[0] = char_to_hid_keycode( key, &modifier );
-	
-
-	tud_hid_keyboard_report(REPORT_ID_KEYBOARD, modifier, keycode);
+	for( int i = 0; password[i]; i++ )
+	{
+		keycode[0] = char_to_hid_keycode( password[i], &modifier );
+		while (!tud_hid_ready()) {
+			tud_task();
+		}
+		tud_hid_keyboard_report( REPORT_ID_KEYBOARD, modifier, keycode) ;
+		sleep_ms(10);
+		while (!tud_hid_ready()) {
+			tud_task();
+		}
+		tud_hid_keyboard_report( REPORT_ID_KEYBOARD, 0, NULL );
+		sleep_ms(10);
+		LOGS_INFO( "Sent password key %c\n\r", (char)keycode[0] );
+	}
 
 }
 
@@ -149,35 +165,68 @@ void hid_task()
 	if( btn )
 	{
 		if ( tud_suspended() )
+		{
 			tud_remote_wakeup();
+			LOGS_INFO( "Remote Wakeup\n\r" );
+		}
 		if( !start_pass )
 		{
 			// Start password sending siquence
 			start_pass = true;
-			send_password_key( password[0] );
+			send_password();
 		} else
 		{
-			send_password_key( 0 );
+			send_password();
 		}
 
 	}
 }
+static void cdc_task(void)
+{
+	uint8_t itf = 0;
+	static uint32_t start_ms = 0;
+	static uint8_t first_time = true;
+	if ( board_millis() - start_ms < CDC_TUSK_INTERVAL) return; // not enough time
+	start_ms += CDC_TUSK_INTERVAL;
 
+	if ( !tud_cdc_n_connected(itf) )
+	{ 
+		LOGS_ERROR( "CDC %d not connected\n\r", itf );
+		first_time = true;
+		return;
+	}
+	if ( tud_cdc_n_write_available(itf) && first_time )
+	{
+		const char *buf = "Please enter new password: ";
+		for(uint32_t i=0; i<strlen(buf); i++)
+		{
+			tud_cdc_n_write_char(itf, buf[i]);
+		}
+		tud_cdc_n_write_flush(itf);
+		first_time = false;
+	}
+	if( tud_cdc_n_available(itf) )
+	{
+		uint8_t buf[64];
+		uint32_t count = tud_cdc_n_read(itf, buf, sizeof(buf));
+		strncpy(password, (const char*)buf, sizeof(password) - 1);
+		password[sizeof(password) - 1] = '\0';
+	}
+	else
+	{
+		LOGS_ERROR( "CDC %d not available\n\r", itf );
+	}
+
+}
 // Invoked when sent REPORT successfully to host
 // Application can use this to send the next report
 // Note: For composite reports, report[0] is report ID
 void tud_hid_report_complete_cb(uint8_t instance, uint8_t const* report, uint16_t len)
 {
+	LOGS_DEBUG( "HID report complete, instance: %d; len: %d\n\r", instance, len );
 	(void) instance;
 	(void) len;
 
-	if( current_pos == sizeof( password ) )
-	{
-		start_pass = false;
-	}
-	else{
-		send_password_key( password[current_pos] );
-	}
 }
 
 // Invoked when received GET_REPORT control request
@@ -186,6 +235,7 @@ void tud_hid_report_complete_cb(uint8_t instance, uint8_t const* report, uint16_
 uint16_t tud_hid_get_report_cb(uint8_t instance, uint8_t report_id, hid_report_type_t report_type, uint8_t* buffer, uint16_t reqlen)
 {
 	// TODO not Implemented
+	LOGS_DEBUG( "HID report complete, instance: %d; report_id: %d\n\r", instance, report_id );
 	(void) instance;
 	(void) report_id;
 	(void) report_type;
@@ -211,5 +261,6 @@ void tud_hid_set_report_cb(uint8_t instance, uint8_t report_id, hid_report_type_
 
 			(void) buffer[0];
 		}
+		LOGS_DEBUG( "HID set report done\n\r" );
 	}
 }
