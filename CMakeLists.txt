@@ -14,14 +14,15 @@ pico_sdk_init()
 add_executable(${PROJECT_NAME})
 
 target_sources(${PROJECT_NAME} PUBLIC
-    ${CMAKE_CURRENT_LIST_DIR}/main.cpp
-    ${CMAKE_CURRENT_LIST_DIR}/usb_descriptors.c
+    ${CMAKE_CURRENT_LIST_DIR}/src/main.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/src/usb_device.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/src/usb_descriptors.c
 )
 
 target_include_directories(
     ${PROJECT_NAME} 
     PUBLIC
-    ${CMAKE_CURRENT_LIST_DIR}
+    ${CMAKE_CURRENT_LIST_DIR}/src
 )
 
 pico_add_extra_outputs(${PROJECT_NAME})
