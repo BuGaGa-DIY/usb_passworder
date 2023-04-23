@@ -17,6 +17,7 @@ target_sources(${PROJECT_NAME} PUBLIC
     ${CMAKE_CURRENT_LIST_DIR}/src/main.cpp
     ${CMAKE_CURRENT_LIST_DIR}/src/usb_device.cpp
     ${CMAKE_CURRENT_LIST_DIR}/src/usb_descriptors.c
+    ${CMAKE_CURRENT_LIST_DIR}/src/MFRC522.cpp
 )
 
 target_include_directories(
@@ -31,9 +32,9 @@ pico_add_extra_outputs(${PROJECT_NAME})
 target_link_libraries(${PROJECT_NAME}
 PUBLIC
 pico_stdlib
+hardware_spi
 tinyusb_device
 tinyusb_board
 )
-
 
 pico_enable_stdio_uart(${PROJECT_NAME} 1)

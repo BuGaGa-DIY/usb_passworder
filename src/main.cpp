@@ -5,33 +5,38 @@
 #include <cstdint>
 #include <ctype.h>
 
+#include "pico/stdlib.h"
 #include "bsp/board.h"
 #include "log.h"
 #include "usb_device.h"
+#include "MFRC522.h"
 
 
-
+MFRC522::Uid myCard;
 
 /*------------- MAIN -------------*/
 int main()
 {
+	stdio_init_all();
 	UsbDevice::init();
-	while (1)
+	MFRC522 mfrc;
+	myCard.size = 7;
+	myCard.uidByte[0] = 0x53;
+	myCard.uidByte[1] = 0x03;
+	myCard.uidByte[2] = 0xAB;
+	myCard.uidByte[3] = 0xB2;
+	myCard.uidByte[4] = 0x50;
+	myCard.uidByte[5] = 0x00;
+	myCard.uidByte[6] = 0x01;
+	LOGS_INFO( "Init!" );
+
+	for (;;)
 	{
-		//UsbDevice::hid_task();
-		//UsbDevice::cdc_task();
 		UsbDevice::pool();
-		char buff[MAX_PASS_LEN] = {0};
-		UsbDevice::write_line( "Enter your echo line\n\r" );
-		uint32_t timeout = board_millis() + 10000;
-		do
+		if( mfrc.isCardPresent( myCard ) )
 		{
-			UsbDevice::read_line( buff, MAX_PASS_LEN );
-			UsbDevice::pool();
-		} while ( !buff[0] && ( board_millis() < timeout ) );
-		if( buff[0] )
-		{
-			UsbDevice::write_line( buff );
+			LOGS_INFO( "Card found!" );
+			UsbDevice::send_password();
 		}
 	}
 

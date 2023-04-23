@@ -122,15 +122,22 @@ bool UsbDevice::send_password()
 {
 	uint32_t timeout = board_millis() + HID_NOT_READY_MAX_INTERVAL;
 	do{
+		tud_task();
 		sleep_ms(10);
 	} while( !tud_hid_ready() && (board_millis() < timeout) );
 	// skip if hid is not ready yet
-	if( !tud_hid_ready ) return false;
+	if( !tud_hid_ready ){
+		LOGS_ERROR( "Abort sending pass, HID not ready\n" );
+		return false;
+	} 
 
 	if ( tud_suspended() )
 	{
-		LOGS_INFO( "Remote Wakeup\n\r" );
-		tud_remote_wakeup();
+		if( tud_remote_wakeup() ){
+			LOGS_INFO( "Remote Wakeup\n\r" );
+		} else {
+			LOGS_INFO( "Remote Wakeup failde\n\r" );
+		}
 	}
 
 	uint8_t keycode[6] = { 0 };
@@ -148,6 +155,7 @@ bool UsbDevice::send_password()
 		}
 		tud_hid_keyboard_report( REPORT_ID_KEYBOARD, 0, NULL );
 		sleep_ms(50);
+		LOGS_DEBUG( "Letter:(%c) sent\n\r", (char)password[i] );
 	}
 	LOGS_INFO( "Password sent\n\r", (char)keycode[0] );
 	return true;
