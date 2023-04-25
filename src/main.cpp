@@ -18,6 +18,7 @@ MFRC522::Uid myCard;
 int main()
 {
 	stdio_init_all();
+	board_init();
 	UsbDevice::init();
 	MFRC522 mfrc;
 	myCard.size = 7;
@@ -28,15 +29,24 @@ int main()
 	myCard.uidByte[4] = 0x50;
 	myCard.uidByte[5] = 0x00;
 	myCard.uidByte[6] = 0x01;
-	LOGS_INFO( "Init!" );
-
+	uint32_t state = board_button_read();
+	LOGS_INFO( "Initialization done" );
 	for (;;)
 	{
 		UsbDevice::pool();
-		if( mfrc.isCardPresent( myCard ) )
+		//if( mfrc.isCardPresent( myCard ) )
+		if( board_button_read() && !state )
 		{
+			state = 1;
 			LOGS_INFO( "Card found!" );
-			UsbDevice::send_password();
+			UsbDevice::write_line( "Card found!\n\r");
+			bool r = UsbDevice::send_password();
+			LOGS_DEBUG( "Posword send result: %s\n\r", r ? "true" : "false" );
+		} 
+		else if( !board_button_read() && state )
+		{
+			state = 0;
+			UsbDevice::send_empty_report();
 		}
 	}
 
