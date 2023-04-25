@@ -1,4 +1,3 @@
-#define DEBUG
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -7,10 +6,12 @@
 
 #include "pico/stdlib.h"
 #include "bsp/board.h"
+
 #include "log.h"
 #include "usb_device.h"
 #include "MFRC522.h"
 
+#define CARD_READ_INTERVAL 5000
 
 MFRC522::Uid myCard;
 
@@ -29,27 +30,22 @@ int main()
 	myCard.uidByte[4] = 0x50;
 	myCard.uidByte[5] = 0x00;
 	myCard.uidByte[6] = 0x01;
-	uint32_t state = board_button_read();
+	uint32_t last_sent_time = 0;
 	LOGS_INFO( "Initialization done" );
 	for (;;)
 	{
 		UsbDevice::pool();
-		//if( mfrc.isCardPresent( myCard ) )
-		if( board_button_read() && !state )
+		if( board_millis() - last_sent_time > CARD_READ_INTERVAL && mfrc.isCardPresent( myCard ) )
 		{
-			state = 1;
 			LOGS_INFO( "Card found!" );
 			UsbDevice::write_line( "Card found!\n\r");
 			bool r = UsbDevice::send_password();
-			LOGS_DEBUG( "Posword send result: %s\n\r", r ? "true" : "false" );
-		} 
-		else if( !board_button_read() && state )
-		{
-			state = 0;
-			UsbDevice::send_empty_report();
+			//LOGS_DEBUG( "Posword send result: %s", r ? "true" : "false" );
+			last_sent_time = board_millis();
 		}
+
+		UsbDevice::send_empty_report();
 	}
 
 	return 0;
 }
-

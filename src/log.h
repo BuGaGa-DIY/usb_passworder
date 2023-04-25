@@ -10,4 +10,5 @@
 #define LOGS_INFO( format, ... ) LOG_TO_CHANNEL( "INFO:\t" format, ##__VA_ARGS__ )
 #define LOGS_ERROR( format, ... ) LOG_TO_CHANNEL( "ERROR:\t" format, ##__VA_ARGS__ )
 
+#define DEBUG
 #endif

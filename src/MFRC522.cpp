@@ -95,7 +95,7 @@ void MFRC522::PCD_WriteRegister(	uint8_t reg,		///< The register to write to. On
 	cs_select();
 	spi_write_blocking(SPI_PORT, data, 2);
 	cs_deselect();
-	sleep_ms(10);
+	sleep_ms(1);
 	
 } // End PCD_WriteRegister()
 
@@ -111,7 +111,7 @@ void MFRC522::PCD_WriteRegister(	uint8_t reg,		///< The register to write to. On
 	spi_write_blocking(SPI_PORT, &reg, 1);
 	spi_write_blocking(SPI_PORT, values, count);
 	cs_deselect();
-	sleep_ms(10);
+	sleep_ms(1);
 
 } // End PCD_WriteRegister()
 

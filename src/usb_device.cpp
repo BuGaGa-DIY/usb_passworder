@@ -9,7 +9,7 @@
 
 bool UsbDevice::_start_pass = false;
 uint8_t UsbDevice::_current_pos = 0;
-char UsbDevice::password[MAX_PASS_LEN] = "MyT4st_pAs7";
+char UsbDevice::password[MAX_PASS_LEN] = "MyT4st_pAs7";""
 
 bool UsbDevice::init()
 {
@@ -137,7 +137,8 @@ bool UsbDevice::send_empty_report()
 			tud_task();
 	}
 	tud_hid_keyboard_report( REPORT_ID_KEYBOARD, 0, NULL ) ;
-	sleep_ms(50);
+	sleep_ms(10);
+	LOGS_DEBUG( "Empty report sent" );
 	return true;
 }
 
