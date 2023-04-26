@@ -9,7 +9,7 @@
 
 bool UsbDevice::_start_pass = false;
 uint8_t UsbDevice::_current_pos = 0;
-char UsbDevice::password[MAX_PASS_LEN] = "MyT4st_pAs7";""
+char UsbDevice::password[MAX_PASS_LEN] = "MyT4st_pAs7";
 
 bool UsbDevice::init()
 {
