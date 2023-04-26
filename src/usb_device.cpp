@@ -9,7 +9,7 @@
 
 bool UsbDevice::_start_pass = false;
 uint8_t UsbDevice::_current_pos = 0;
-char UsbDevice::password[MAX_PASS_LEN] = "MyT4st_pAs7";
+char UsbDevice::password[MAX_PASS_LEN] = "MyT4st_pAs7";""
 
 bool UsbDevice::init()
 {
@@ -34,7 +34,7 @@ int UsbDevice::read_line(char *buffer, uint32_t max_len)
 		{
 			uint8_t ch;
 			uint32_t read_len = tud_cdc_n_read(0, &ch, 1);
-			LOGS_INFO( "CDC read ch: %c\n\r", ch );
+			LOGS_INFO( "CDC read ch: %c", ch );
 			if (read_len)
 			{
 				// Stop reading when a newline character is encountered
@@ -53,7 +53,7 @@ int UsbDevice::read_line(char *buffer, uint32_t max_len)
 		if( !count && ( board_millis() < timeout ) ) break;
 	}
 	buffer[count] = '\0';
-	if( count ) LOGS_INFO( "CDC read line: %s\n\r", buffer );
+	if( count ) LOGS_INFO( "CDC read line: %s", buffer );
 	return (int)count;
 }
 
@@ -71,7 +71,7 @@ void UsbDevice::write_line( const char *buffer )
 			}
 			tud_cdc_n_write_flush( 0 );
 			tud_task();
-			LOGS_INFO( "CDC writed line: %s\n\r", buffer );
+			LOGS_INFO( "CDC writed line: %s", buffer );
 			break;
 		}
 		else 
@@ -79,59 +79,35 @@ void UsbDevice::write_line( const char *buffer )
 	}
 
 }
-void UsbDevice::cdc_task()
-{
-	uint8_t itf = 0;
-	static uint32_t start_ms = 0;
-	static uint8_t first_time = true;
-	if ( board_millis() - start_ms < CDC_TUSK_INTERVAL) return; // not enough time
-	start_ms += CDC_TUSK_INTERVAL;
 
-	if ( !tud_cdc_n_connected(itf) )
-	{ 
-		LOGS_ERROR( "CDC %d not connected\n\r", itf );
-		first_time = true;
-		return;
-	}
-	if ( tud_cdc_n_write_available(itf) && first_time )
-	{
-		const char *buf = "Please enter new password: ";
-		for(uint32_t i=0; i<strlen(buf); i++)
-		{
-			tud_cdc_n_write_char(itf, buf[i]);
-		}
-		tud_cdc_n_write_flush(itf);
-		first_time = false;
-	}
-	if( tud_cdc_n_available(itf) )
-	{
-		uint8_t buf[64];
-		uint32_t count = tud_cdc_n_read(itf, buf, sizeof(buf));
-		strncpy(password, (const char*)buf, sizeof(password) - 1);
-		password[sizeof(password) - 1] = '\0';
-	}
-	else
-	{
-		LOGS_ERROR( "CDC %d not available\n\r", itf );
-	}
-
-}
-
-
-bool UsbDevice::send_password()
+bool UsbDevice::is_hid_ready()
 {
 	uint32_t timeout = board_millis() + HID_NOT_READY_MAX_INTERVAL;
 	do{
+		tud_task();
 		sleep_ms(10);
 	} while( !tud_hid_ready() && (board_millis() < timeout) );
 	// skip if hid is not ready yet
-	if( !tud_hid_ready ) return false;
+	if( !tud_hid_ready ){
+		LOGS_ERROR( "Abort sending pass, HID not ready" );
+		return false;
+	} 
 
 	if ( tud_suspended() )
 	{
-		LOGS_INFO( "Remote Wakeup\n\r" );
-		tud_remote_wakeup();
+		if( tud_remote_wakeup() ){
+			LOGS_INFO( "Remote Wakeup" );
+		} else {
+			LOGS_INFO( "Remote Wakeup failde" );
+			return false;
+		}
 	}
+	return true;
+}
+
+bool UsbDevice::send_password()
+{
+	if( !is_hid_ready() ) return false;
 
 	uint8_t keycode[6] = { 0 };
 	uint8_t modifier = 0;
@@ -142,14 +118,27 @@ bool UsbDevice::send_password()
 			tud_task();
 		}
 		tud_hid_keyboard_report( REPORT_ID_KEYBOARD, modifier, keycode) ;
-		sleep_ms(50);
+		sleep_ms(25);
 		while (!tud_hid_ready()) {
 			tud_task();
 		}
 		tud_hid_keyboard_report( REPORT_ID_KEYBOARD, 0, NULL );
-		sleep_ms(50);
+		sleep_ms(25);
+		LOGS_DEBUG( "Letter:(%c) sent", (char)password[i] );
 	}
-	LOGS_INFO( "Password sent\n\r", (char)keycode[0] );
+	LOGS_INFO( "Password sent" );
+	return true;
+}
+
+bool UsbDevice::send_empty_report()
+{
+	if( !is_hid_ready() ) return false;
+	while (!tud_hid_ready()) {
+			tud_task();
+	}
+	tud_hid_keyboard_report( REPORT_ID_KEYBOARD, 0, NULL ) ;
+	sleep_ms(10);
+	LOGS_DEBUG( "Empty report sent" );
 	return true;
 }
 
