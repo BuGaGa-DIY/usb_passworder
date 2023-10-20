@@ -16,9 +16,9 @@ add_executable(${PROJECT_NAME})
 target_sources(${PROJECT_NAME} PUBLIC
     ${CMAKE_CURRENT_LIST_DIR}/src/main.cpp
     ${CMAKE_CURRENT_LIST_DIR}/src/usb_device.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/src/MFRC522.cpp
     ${CMAKE_CURRENT_LIST_DIR}/src/usb_descriptors.c
     ${CMAKE_CURRENT_LIST_DIR}/src/ssd1306.c
-    ${CMAKE_CURRENT_LIST_DIR}/src/MFRC522.cpp
 )
 
 target_include_directories(

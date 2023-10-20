@@ -6,12 +6,12 @@
 
 #include "pico/stdlib.h"
 #include "bsp/board.h"
+#include "hardware/i2c.h"
 
 #include "log.h"
-#include "ssd1306.h"
-#include "hardware/i2c.h"
 #include "usb_device.h"
 #include "MFRC522.h"
+#include "ssd1306.h"
 
 
 #define CARD_READ_INTERVAL 5000

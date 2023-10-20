@@ -40,7 +40,9 @@ typedef struct {
     uint8_t *buffer;	/**< display buffer */
     size_t bufsize;		/**< buffer size */
 } ssd1306_t;
-
+#ifdef __cplusplus
+extern "C" {
+#endif
 /**
 *	@brief initialize display
 *
@@ -201,5 +203,8 @@ void ssd1306_draw_string_with_font(ssd1306_t *p, uint32_t x, uint32_t y, uint32_
 	@param[in] s : text to draw
 */
 void ssd1306_draw_string(ssd1306_t *p, uint32_t x, uint32_t y, uint32_t scale, const char *s);
+#ifdef __cplusplus
+}
+#endif
 
 #endif
