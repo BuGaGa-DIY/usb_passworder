@@ -9,7 +9,8 @@
 
 bool UsbDevice::_start_pass = false;
 uint8_t UsbDevice::_current_pos = 0;
-char UsbDevice::password[MAX_PASS_LEN] = "MyT4st_pAs7";
+uint8_t UsbDevice::_selected_password = 0;
+char UsbDevice::password[2][MAX_PASS_LEN] = { "MyT4st_pAs7", "MySecondpas" };
 
 bool UsbDevice::init()
 {
@@ -105,15 +106,26 @@ bool UsbDevice::is_hid_ready()
 	return true;
 }
 
+void UsbDevice::select_password(uint8_t id)
+{
+	if( id < 0 || id > 1) return;
+	_selected_password = id;
+}
+
+uint8_t UsbDevice::get_selected_password_id()
+{
+	return _selected_password;
+}
+
 bool UsbDevice::send_password()
 {
 	if( !is_hid_ready() ) return false;
 
 	uint8_t keycode[6] = { 0 };
 	uint8_t modifier = 0;
-	for( int i = 0; password[i]; i++ )
+	for( int i = 0; password[_selected_password][i]; i++ )
 	{
-		keycode[0] = char_to_hid_keycode( password[i], &modifier );
+		keycode[0] = char_to_hid_keycode( password[_selected_password][i], &modifier );
 		while (!tud_hid_ready()) {
 			tud_task();
 		}
@@ -124,7 +136,7 @@ bool UsbDevice::send_password()
 		}
 		tud_hid_keyboard_report( REPORT_ID_KEYBOARD, 0, NULL );
 		sleep_ms(25);
-		LOGS_DEBUG( "Letter:(%c) sent", (char)password[i] );
+		LOGS_DEBUG( "Letter:(%c) sent", (char)password[_selected_password][i] );
 	}
 	LOGS_INFO( "Password sent" );
 	return true;

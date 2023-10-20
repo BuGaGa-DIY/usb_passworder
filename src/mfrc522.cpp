@@ -1,4 +1,4 @@
-#include "MFRC522.h"
+#include "mfrc522.h"
 #include <stdint.h>
 #include <cstring>
 #include <stdio.h>
